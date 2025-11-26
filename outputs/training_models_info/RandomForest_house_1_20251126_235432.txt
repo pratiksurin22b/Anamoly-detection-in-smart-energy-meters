@@ -1,0 +1,37 @@
+Model: RandomForest
+House: house_1
+Timestamp: 20251126_235432
+
+Training/testing split: 70% train, 15% val, 15% test (chronological)
+Features: ['P_mean', 'P_max', 'P_std', 'Baseline_Mean', 'Baseline_Max']
+RF hyperparameters:
+  n_estimators=200, max_depth=None, class_weight='balanced_subsample', random_state=42
+
+Test set size: 4106
+Label distribution in test set (true y):
+0    3986
+2      61
+3      59
+Name: count, dtype: int64
+
+Classification report:
+              precision    recall  f1-score   support
+
+           0       1.00      1.00      1.00      3986
+           2       1.00      0.98      0.99        61
+           3       0.96      0.76      0.85        59
+
+    accuracy                           1.00      4106
+   macro avg       0.98      0.92      0.95      4106
+weighted avg       1.00      1.00      1.00      4106
+
+
+Confusion matrix (rows=true, cols=pred):
+[[3984    0    2]
+ [   1   60    0]
+ [  14    0   45]]
+
+Per-class accuracy (% correctly classified in each true class):
+  Label 0: 99.95%
+  Label 2: 98.36%
+  Label 3: 76.27%

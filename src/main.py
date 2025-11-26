@@ -8,10 +8,14 @@ from .preprocessing import (
     check_frequency_and_gaps,
     get_p_plus_series,
     preprocess_missing_data,
-    build_multi_resolution_datasets,
+    build_master_from_clean,
+    create_15min_aggregates,
+    compute_15min_baseline,
+    apply_relative_anomaly_labels_15min,
 )
 from .baseline_analysis import extract_representative_week, compute_weekly_baseline
 from .visualization import plot_week_p_plus, plot_daily_p_plus, plot_hourly_p_plus
+
 
 def summarize_preprocessing(df_raw, df_clean, p_col="p_plus"):
     # Basic shapes and ranges
@@ -41,7 +45,16 @@ def summarize_preprocessing(df_raw, df_clean, p_col="p_plus"):
 
     print("--- End of Preprocessing Summary ---\n")
 
+
 def run_pipeline_for_house(house_id: str = "house_1") -> None:
+    """Run the end-to-end pipeline for a single house.
+
+    This version focuses on the new 15-minute relative labeling method:
+    - Works on cleaned data aggregated to 15-minute blocks.
+    - Builds a dynamic baseline per (day_of_week, hour, weekend).
+    - Assigns labels in {0, 2, 3}: 0=normal, 2=fraud-like low usage, 3=fault/spike.
+    - Outputs a single CSV: `<house_id>_15min_relative.csv` in OUTPUT_DIR.
+    """
     csv_name = config.HOUSE_FILES[house_id]
     csv_path = os.path.join(config.DATA_DIR, csv_name)
 
@@ -63,35 +76,37 @@ def run_pipeline_for_house(house_id: str = "house_1") -> None:
         large_gap_min="1H",
     )
     summarize_preprocessing(df, df_clean, p_col="p_plus")
-    # Build multi-resolution datasets (Random Forest + LSTM)
-    daily_df, seq_df = build_multi_resolution_datasets(
-        df_clean,
-        p_col="p_plus",
-        base_freq=config.TARGET_FREQ,
-        seq_freq="1T",  # change to "5T" for 5-minute if you prefer
-    )
 
     os.makedirs(config.OUTPUT_DIR, exist_ok=True)
 
-    # Save processed datasets
-    daily_path = os.path.join(config.OUTPUT_DIR, f"{house_id}_daily_aggregates.csv")
-    seq_path = os.path.join(config.OUTPUT_DIR, f"{house_id}_highres_1min.csv")
-    daily_df.to_csv(daily_path, index=True)
-    seq_df.to_csv(seq_path, index=True)
+    # Build master dataset on a regular grid (no labels here for the new pipeline)
+    df_master = build_master_from_clean(
+        df_clean,
+        p_col="p_plus",
+        base_freq=config.TARGET_FREQ,
+    )
 
-    # Step 3: Baseline visualization on cleaned data
+    # Phase 3: 15-minute relative labeling on real data
+    print("\n--- Running Phase 3: 15-minute relative labeling (0=normal, 2=fraud, 3=fault) ---")
+    df_15 = create_15min_aggregates(df_master, p_col="p_plus", freq="15T")
+    df_15 = compute_15min_baseline(df_15)
+    df_15 = apply_relative_anomaly_labels_15min(df_15)
+
+    rel_15_path = os.path.join(config.OUTPUT_DIR, f"{house_id}_15min_relative.csv")
+    df_15.to_csv(rel_15_path, index=True)
+
+    print("15-min relative labels (label_rel):", df_15["label_rel"].value_counts().sort_index())
+
+    # Step 4: Baseline visualization on cleaned data (independent of labels)
     p_plus_clean = get_p_plus_series(df_clean)
     week = extract_representative_week(p_plus_clean)
 
-    # Weekly plot
     week_fig_path = os.path.join(config.OUTPUT_DIR, f"{house_id}_pplus_week.png")
     plot_week_p_plus(week, week_fig_path, title=f"{house_id} Weekly P+ Load (cleaned)")
 
-    # Daily plots (one per day)
     daily_dir = os.path.join(config.OUTPUT_DIR, f"{house_id}_daily")
     plot_daily_p_plus(week, daily_dir, prefix=house_id)
 
-    # Hourly plots (one per hour per day)
     hourly_dir = os.path.join(config.OUTPUT_DIR, f"{house_id}_hourly")
     plot_hourly_p_plus(week, hourly_dir, prefix=house_id)
 

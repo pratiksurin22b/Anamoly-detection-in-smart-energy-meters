@@ -1,0 +1,38 @@
+Model: LSTM
+House: house_1
+Timestamp: 20251126_235723
+
+Training/testing split: 70% train, 15% val, 15% test (chronological)
+Sequence length (15-min blocks): 96
+Number of features per timestep: 5
+LSTM hyperparameters:
+  LSTM units=64, dense_units=64, dropout=0.3, optimizer='adam',
+  loss='sparse_categorical_crossentropy', epochs=10, batch_size=64
+
+Train sequences: 19065
+Val sequences: 4011
+Test sequences: 4011
+Label mapping (original -> index):
+{0: 0, 2: 1, 3: 2}
+
+Classification report:
+              precision    recall  f1-score   support
+
+           0       0.93      0.92      0.92      2225
+           2       0.76      0.51      0.61       388
+           3       0.89      0.98      0.94      1398
+
+    accuracy                           0.90      4011
+   macro avg       0.86      0.81      0.82      4011
+weighted avg       0.90      0.90      0.90      4011
+
+
+Confusion matrix (rows=true, cols=pred):
+[[2049   40  136]
+ [ 159  199   30]
+ [   0   24 1374]]
+
+Per-class accuracy for sequences (% correctly classified in each true class):
+  Label 0: 92.09%
+  Label 2: 51.29%
+  Label 3: 98.28%

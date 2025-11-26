@@ -59,3 +59,4 @@ def plot_hourly_p_plus(series: pd.Series, output_dir: str, prefix: str = "house_
         filename = os.path.join(output_dir, f"{prefix}_pplus_{day}_h{hour:02d}.png")
         plt.savefig(filename)
         plt.close()
+
